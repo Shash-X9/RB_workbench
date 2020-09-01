@@ -22,16 +22,15 @@ func main() {
 	}))
 
 	type Report struct {
-		segment_idx  int `json:"segment_id"`
-		Triggered   int`json:"Triggered"`
-		Opened 		int `json:Opened`
-
+		segment_idx int `json:"segment_id"`
+		Triggered   int `json:"Triggered"`
+		Opened      int `json:Opened`
 	}
 	type Employees struct {
 		Reports []Report `json:"report"`
 	}
 
-	db, err := sql.Open("mysql", "rbrideuser:ridep@s$w0rd@tcp(rides-prod.ccoqqognomd8.ap-southeast-1.rds.amazonaws.com:3306)/ride")
+	db, err := sql.Open("mysql", "rbrideuser:ridep@s$w0rd@tcp(rb-platform-db.ccoqqognomd8.ap-southeast-1.rds.amazonaws.com:3306)/ride")
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
@@ -84,20 +83,29 @@ func main() {
 	//})
 
 	e.GET("/report/:id", func(c echo.Context) error {
-		requested_id := c.Param("segment_idx")
+		requested_id := c.Param("id")
 		fmt.Println(requested_id)
-		var triggered int
-		var segment_idx int
-		var opened int
+		var triggered sql.NullInt32
+		var segment_idx sql.NullInt32
+		var opened sql.NullInt32
 
-
-		err = db.QueryRow("SELECT opened,triggered FROM report WHERE segment_idx = ?", requested_id).Scan(&segment_idx,&triggered, &opened)
+		err = db.QueryRow("SELECT segment_idx, opened,triggered FROM report WHERE segment_idx = ?", requested_id).Scan(&segment_idx, &opened, &triggered)
 
 		if err != nil {
 			fmt.Println(err)
 		}
 
-		response := Report{segment_idx: segment_idx, Triggered: triggered, Opened: opened}
+		//response := Report{segment_idx: segment_idx, Triggered: triggered, Opened: opened}
+		response := Report{}
+		if triggered.Valid {
+			response.Triggered = int(triggered.Int32)
+		}
+		if segment_idx.Valid {
+			response.segment_idx = int(segment_idx.Int32)
+		}
+		if opened.Valid {
+			response.Opened = int(opened.Int32)
+		}
 		return c.JSON(http.StatusOK, response)
 	})
 
